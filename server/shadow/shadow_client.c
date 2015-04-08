@@ -1064,6 +1064,8 @@ void* shadow_client_thread(rdpShadowClient* client)
 
 	peer->Disconnect(peer);
 	
+	shadow_client_channels_free(client);
+
 	freerdp_peer_context_free(peer);
 	freerdp_peer_free(peer);
 	ExitThread(0);
