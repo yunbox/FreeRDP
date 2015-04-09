@@ -26,23 +26,53 @@
 
 int shadow_encoder_create_frame_id(rdpShadowEncoder* encoder)
 {
-	UINT32 frameId;
 	int inFlightFrames;
+	int count;
 	SURFACE_FRAME* frame;
+	ULONG_PTR* pKeys = NULL;
 
-	inFlightFrames = ListDictionary_Count(encoder->frameList);
+	/* 
+	 * Calculate in flight frame. Some rdp clients skips frame ack
+	 * so we clean legacy frame id more than 2 seconds ago
+	 */
+	inFlightFrames = 0;
+	count = ListDictionary_GetKeys(encoder->frameList, &pKeys);
 
-	if (inFlightFrames > encoder->frameAck)
+	for (count--; count >= 0; count--)
 	{
-		encoder->fps = (100 / (inFlightFrames + 1) * encoder->maxFps) / 100;
+		if (encoder->frameId > (UINT32)pKeys[count] + encoder->fps * 2)
+		{
+			ListDictionary_Remove(encoder->frameList, (void*) (size_t) pKeys[count]);
+		}
+		else
+		{
+			inFlightFrames++;
+		}
+
 	}
-	else
+
+	/* 
+	 * Calculate suggested fps. 
+	 * Expected inFlightFrames is 1, and change fps smoothly.
+	 * We increase/decrease fps slightly if inFlightFrames is 0 and 2
+	 * If inFlightFrames larger than 2, that means we send update too
+	 * rapidly and need to decrease quickly.
+	 */
+	if (inFlightFrames > 2)
+	{
+		encoder->fps = (100 / (inFlightFrames - 1) * encoder->fps) / 100;
+	}
+	else if (inFlightFrames > encoder->frameAck)
+	{
+		encoder->fps -= 2;
+	}
+	else if (inFlightFrames < encoder->frameAck)
 	{
 		encoder->fps += 2;
-
-		if (encoder->fps > encoder->maxFps)
-			encoder->fps = encoder->maxFps;
 	}
+
+	if (encoder->fps > encoder->maxFps)
+		encoder->fps = encoder->maxFps;
 
 	if (encoder->fps < 1)
 		encoder->fps = 1;
@@ -52,7 +82,7 @@ int shadow_encoder_create_frame_id(rdpShadowEncoder* encoder)
 	if (!frame)
 		return -1;
 
-	frameId = frame->frameId = ++encoder->frameId;
+	frame->frameId = ++encoder->frameId;
 	ListDictionary_Add(encoder->frameList, (void*) (size_t) frame->frameId, frame);
 
 	return (int) frame->frameId;
@@ -132,7 +162,6 @@ int shadow_encoder_init_rfx(rdpShadowEncoder* encoder)
 	if (!encoder->frameList)
 	{
 		encoder->fps = 16;
-		encoder->maxFps = 32;
 		encoder->frameId = 0;
 		encoder->frameList = ListDictionary_New(TRUE);
 		encoder->frameAck = settings->SurfaceFrameMarkerEnabled;
@@ -159,7 +188,6 @@ int shadow_encoder_init_nsc(rdpShadowEncoder* encoder)
 	if (!encoder->frameList)
 	{
 		encoder->fps = 16;
-		encoder->maxFps = 32;
 		encoder->frameId = 0;
 		encoder->frameList = ListDictionary_New(TRUE);
 		encoder->frameAck = settings->SurfaceFrameMarkerEnabled;
