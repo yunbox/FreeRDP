@@ -1017,14 +1017,47 @@ void* shadow_client_thread(rdpShadowClient* client)
 				int numRects = 0;
 				const RECTANGLE_16* rects;
 
-				rects = region16_rects(&(subsystem->invalidRegion), &numRects);
-
-				for (index = 0; index < numRects; index++)
+				if (client->inLobby)
 				{
-					region16_union_rect(&(client->invalidRegion), &(client->invalidRegion), &rects[index]);
+					shadow_client_send_surface_update(client);
 				}
+				else
+				{
+					if (settings->DesktopWidth != (UINT32)screen->width || settings->DesktopHeight != (UINT32)screen->height)
+					{
+						/* If we are not in lobby and screen size changed, do resize */
+						RECTANGLE_16 invalidRect;
 
-				shadow_client_send_surface_update(client);
+						/* Send Resize */
+						settings->DesktopWidth = screen->width;
+						settings->DesktopHeight = screen->height;
+						client->activated = FALSE;
+						peer->update->DesktopResize(peer->update->context); // update_send_desktop_resize
+
+						/* Next frame invalid all */
+						invalidRect.left = 0;
+						invalidRect.top = 0;
+						invalidRect.right = settings->DesktopWidth;
+						invalidRect.bottom = settings->DesktopHeight;
+
+						region16_clear(&(client->invalidRegion));
+						region16_union_rect(&(client->invalidRegion), &(client->invalidRegion), &invalidRect);
+
+						WLog_ERR(TAG, "Client from %s is resized (%dx%d@%d)",
+								peer->hostname, settings->DesktopWidth, settings->DesktopHeight, settings->ColorDepth);
+					}
+					else 
+					{
+						rects = region16_rects(&(subsystem->invalidRegion), &numRects);
+
+						for (index = 0; index < numRects; index++)
+						{
+							region16_union_rect(&(client->invalidRegion), &(client->invalidRegion), &rects[index]);
+						}
+
+						shadow_client_send_surface_update(client);
+					}
+				}
 			}
 
 			EnterSynchronizationBarrier(&(subsystem->barrier), 0);

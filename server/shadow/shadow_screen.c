@@ -83,3 +83,26 @@ void shadow_screen_free(rdpShadowScreen* screen)
 	free(screen);
 }
 
+void shadow_screen_reset(rdpShadowScreen* screen)
+{
+	int x, y;
+	int width, height;
+	MONITOR_DEF* primary;
+	rdpShadowSubsystem* subsystem;
+
+	if (!screen)
+		return;
+
+	subsystem = screen->server->subsystem;
+	primary = &(subsystem->monitors[subsystem->selectedMonitor]);
+
+	x = primary->left;
+	y = primary->top;
+	width = primary->right - primary->left;
+	height = primary->bottom - primary->top;
+
+	screen->width = width;
+	screen->height = height;
+
+	shadow_surface_reset(screen->primary, x, y, width, height);
+}

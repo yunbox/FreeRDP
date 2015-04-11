@@ -41,15 +41,12 @@ rdpShadowSurface* shadow_surface_new(rdpShadowServer* server, int x, int y, int 
 	surface->height = height;
 	surface->scanline = (surface->width + (surface->width % 4)) * 4;
 
-	surface->data = (BYTE*) malloc(surface->scanline * surface->height);
-
+	surface->data = (BYTE*) calloc(1, surface->scanline * surface->height);
 	if (!surface->data)
 	{
 		free (surface);
 		return NULL;
 	}
-
-	ZeroMemory(surface->data, surface->scanline * surface->height);
 
 	if (!InitializeCriticalSectionAndSpinCount(&(surface->lock), 4000))
 	{
@@ -75,4 +72,34 @@ void shadow_surface_free(rdpShadowSurface* surface)
 	region16_uninit(&(surface->invalidRegion));
 
 	free(surface);
+}
+
+void shadow_surface_reset(rdpShadowSurface *surface, int x, int y, int width, int height)
+{
+	BYTE* buffer = NULL;
+	int scanline = (width + (width % 4)) * 4;
+	RECTANGLE_16 newRect;
+
+	if (!surface)
+		return;
+
+	buffer = (BYTE*) calloc(1, scanline * height * 2);
+	if (buffer)
+	{
+		surface->x = x;
+		surface->y = y;
+		surface->width = width;
+		surface->height = height;
+		surface->scanline = scanline;
+
+		free(surface->data);
+		surface->data = buffer;
+
+		newRect.left = newRect.top = 0;
+		newRect.right = width;
+		newRect.bottom = height;
+
+		// constraint invalid rect with new bound
+		region16_intersect_rect(&(surface->invalidRegion), &(surface->invalidRegion), &newRect);
+	}
 }
