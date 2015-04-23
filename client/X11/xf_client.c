@@ -300,20 +300,20 @@ BOOL xf_sw_end_paint(rdpContext* context)
 			if (gdi->primary->hdc->hwnd->invalid->null)
 				return TRUE;
 
-			xf_lock_x11(xfc, FALSE);
+			xf_lock_x11(xfc, TRUE);
 
 			XPutImage(xfc->display, xfc->primary, xfc->gc, xfc->image, x, y, x, y, w, h);
 
 			xf_draw_screen(xfc, x, y, w, h);
 
-			xf_unlock_x11(xfc, FALSE);
+			xf_unlock_x11(xfc, TRUE);
 		}
 		else
 		{
 			if (gdi->primary->hdc->hwnd->ninvalid < 1)
 				return TRUE;
 
-			xf_lock_x11(xfc, FALSE);
+			xf_lock_x11(xfc, TRUE);
 
 			for (i = 0; i < ninvalid; i++)
 			{
@@ -329,7 +329,7 @@ BOOL xf_sw_end_paint(rdpContext* context)
 
 			XFlush(xfc->display);
 
-			xf_unlock_x11(xfc, FALSE);
+			xf_unlock_x11(xfc, TRUE);
 		}
 	}
 	else
@@ -399,11 +399,11 @@ BOOL xf_hw_end_paint(rdpContext* context)
 			w = xfc->hdc->hwnd->invalid->w;
 			h = xfc->hdc->hwnd->invalid->h;
 
-			xf_lock_x11(xfc, FALSE);
+			xf_lock_x11(xfc, TRUE);
 
 			xf_draw_screen(xfc, x, y, w, h);
 
-			xf_unlock_x11(xfc, FALSE);
+			xf_unlock_x11(xfc, TRUE);
 		}
 		else
 		{
@@ -417,7 +417,7 @@ BOOL xf_hw_end_paint(rdpContext* context)
 			ninvalid = xfc->hdc->hwnd->ninvalid;
 			cinvalid = xfc->hdc->hwnd->cinvalid;
 
-			xf_lock_x11(xfc, FALSE);
+			xf_lock_x11(xfc, TRUE);
 
 			for (i = 0; i < ninvalid; i++)
 			{
@@ -431,7 +431,7 @@ BOOL xf_hw_end_paint(rdpContext* context)
 
 			XFlush(xfc->display);
 
-			xf_unlock_x11(xfc, FALSE);
+			xf_unlock_x11(xfc, TRUE);
 		}
 	}
 	else
@@ -489,16 +489,20 @@ BOOL xf_process_x_events(freerdp* instance)
 
 	while (pending_status)
 	{
-		xf_lock_x11(xfc, FALSE);
+		xf_lock_x11(xfc, TRUE);
 		pending_status = XPending(xfc->display);
-		xf_unlock_x11(xfc, FALSE);
+		xf_unlock_x11(xfc, TRUE);
 
 		if (pending_status)
 		{
+			xf_lock_x11(xfc, TRUE);
+
 			ZeroMemory(&xevent, sizeof(xevent));
 			XNextEvent(xfc->display, &xevent);
 
 			status = xf_event_process(instance, &xevent);
+
+			xf_unlock_x11(xfc, TRUE);
 
 			if (!status)
 				return status;
@@ -1304,20 +1308,20 @@ void* xf_input_thread(void* arg)
 		{
 			do
 			{
-				xf_lock_x11(xfc, FALSE);
+				xf_lock_x11(xfc, TRUE);
 				pending_status = XPending(xfc->display);
-				xf_unlock_x11(xfc, FALSE);
+				xf_unlock_x11(xfc, TRUE);
 
 				if (pending_status)
 				{
-					xf_lock_x11(xfc, FALSE);
+					xf_lock_x11(xfc, TRUE);
 
 					ZeroMemory(&xevent, sizeof(xevent));
 					XNextEvent(xfc->display, &xevent);
 
 					process_status = xf_event_process(instance, &xevent);
 
-					xf_unlock_x11(xfc, FALSE);
+					xf_unlock_x11(xfc, TRUE);
 
 					if (!process_status)
 						break;
