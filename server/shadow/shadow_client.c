@@ -243,6 +243,14 @@ BOOL shadow_client_post_connect(freerdp_peer* peer)
 		}
 	}
 
+	if (subsystem->ClientConnect)
+	{
+		if (subsystem->ClientConnect(subsystem, peer))
+			return TRUE;
+		else
+			return FALSE;
+	}
+
 	return TRUE;
 }
 
@@ -1060,6 +1068,11 @@ void* shadow_client_thread(rdpShadowClient* client)
 				shadow_client_subsystem_process_message(client, &message);
 			}
 		}
+	}
+
+	if (peer->connected && subsystem->ClientDisconnect)
+	{
+		subsystem->ClientDisconnect(subsystem, peer);
 	}
 
 	peer->Disconnect(peer);
