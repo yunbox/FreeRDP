@@ -1273,7 +1273,6 @@ void* xf_input_thread(void* arg)
 	DWORD nCount;
 	HANDLE events[2];
 	XEvent xevent;
-	wMessage msg;
 	wMessageQueue* queue;
 	int pending_status = 1;
 	int process_status = 1;
@@ -1292,10 +1291,10 @@ void* xf_input_thread(void* arg)
 
 		if (WaitForSingleObject(events[0], 0) == WAIT_OBJECT_0)
 		{
-			if (MessageQueue_Peek(queue, &msg, FALSE))
+			if (!freerdp_message_queue_process_pending_messages(instance, FREERDP_INPUT_MESSAGE_QUEUE))
 			{
-				if (msg.id == WMQ_QUIT)
-					break;
+				xfc->disconnect = TRUE;
+				break;
 			}
 		}
 
@@ -1325,12 +1324,14 @@ void* xf_input_thread(void* arg)
 			while (pending_status);
 
 			if (!process_status)
+			{
+				WLog_INFO(TAG, "User Disconnect");
+				xfc->disconnect = TRUE;
 				break;
-
+			}
 		}
 	}
 
-	MessageQueue_PostQuit(queue, 0);
 	ExitThread(0);
 	return NULL;
 }
@@ -1400,7 +1401,6 @@ void* xf_client_thread(void* param)
 	xfContext* xfc;
 	freerdp* instance;
 	rdpContext* context;
-	HANDLE inputEvent;
 	HANDLE inputThread;
 	rdpChannels* channels;
 	rdpSettings* settings;
@@ -1424,24 +1424,11 @@ void* xf_client_thread(void* param)
 	channels = context->channels;
 	settings = context->settings;
 
-	if (!settings->AsyncInput)
+	if (settings->AsyncInput)
 	{
-		inputEvent = xfc->x11event;
-	}
-	else
-	{
-		if (!(inputEvent = freerdp_get_message_queue_event_handle(instance, FREERDP_INPUT_MESSAGE_QUEUE)))
-		{
-			WLog_ERR(TAG, "async input: failed to get input event handle");
-			exit_code = XF_EXIT_UNKNOWN;
-			goto disconnect;
-		}
-		if (!(inputThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) xf_input_thread, instance, 0, NULL)))
-		{
-			WLog_ERR(TAG, "async input: failed to create input thread");
-			exit_code = XF_EXIT_UNKNOWN;
-			goto disconnect;
-		}
+        inputThread = CreateThread(NULL, 0, 
+				(LPTHREAD_START_ROUTINE) xf_input_thread, 
+				instance, 0, NULL);
 	}
 
 	while (!xfc->disconnect && !freerdp_shall_disconnect(instance))
@@ -1458,7 +1445,10 @@ void* xf_client_thread(void* param)
 		}
 
 		nCount = 0;
-		handles[nCount++] = inputEvent;
+		if (!settings->AsyncInput)
+		{
+			handles[nCount++] = xfc->x11event;
+		}
 
 		if (!settings->AsyncTransport)
 		{
@@ -1467,7 +1457,7 @@ void* xf_client_thread(void* param)
 			if (tmp == 0)
 			{
 				WLog_ERR(TAG, "freerdp_get_event_handles failed");
-				break;
+			break;
 			}
 
 			nCount += tmp;
@@ -1493,18 +1483,6 @@ void* xf_client_thread(void* param)
 			{
 				WLog_INFO(TAG, "Closed from X11");
 				break;
-			}
-		}
-		else
-		{
-			if (WaitForSingleObject(inputEvent, 0) == WAIT_OBJECT_0)
-			{
-				if (!freerdp_message_queue_process_pending_messages(instance, FREERDP_INPUT_MESSAGE_QUEUE))
-				{
-					WLog_INFO(TAG, "User Disconnect");
-					xfc->disconnect = TRUE;
-					break;
-				}
 			}
 		}
 	}
