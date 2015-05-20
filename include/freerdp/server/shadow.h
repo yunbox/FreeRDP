@@ -31,6 +31,8 @@
 
 #include <freerdp/server/encomsp.h>
 #include <freerdp/server/remdesk.h>
+#include <freerdp/server/rdpsnd.h>
+#include <freerdp/server/audin.h>
 
 #include <freerdp/codec/color.h>
 #include <freerdp/codec/region.h>
@@ -70,6 +72,8 @@ typedef int (*pfnShadowUnicodeKeyboardEvent)(rdpShadowSubsystem* subsystem, UINT
 typedef int (*pfnShadowMouseEvent)(rdpShadowSubsystem* subsystem, UINT16 flags, UINT16 x, UINT16 y);
 typedef int (*pfnShadowExtendedMouseEvent)(rdpShadowSubsystem* subsystem, UINT16 flags, UINT16 x, UINT16 y);
 
+typedef void (*pfnShadowChannelAudinServerReceiveSamples)(rdpShadowSubsystem* subsystem, const void* buf, int nframes);
+
 struct rdp_shadow_client
 {
 	rdpContext context;
@@ -93,6 +97,8 @@ struct rdp_shadow_client
 	HANDLE vcm;
 	EncomspServerContext* encomsp;
 	RemdeskServerContext* remdesk;
+	RdpsndServerContext* rdpsnd;
+	audin_server_context* audin;
 };
 
 struct rdp_shadow_server
@@ -156,6 +162,7 @@ struct _RDP_SHADOW_ENTRY_POINTS
 	pfnShadowUnicodeKeyboardEvent UnicodeKeyboardEvent; \
 	pfnShadowMouseEvent MouseEvent; \
 	pfnShadowExtendedMouseEvent ExtendedMouseEvent; \
+	pfnShadowChannelAudinServerReceiveSamples AudinServerReceiveSamples; \
 	\
 	pfnShadowAuthenticate Authenticate; \
 	\

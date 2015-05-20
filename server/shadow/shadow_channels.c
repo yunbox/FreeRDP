@@ -36,5 +36,32 @@ int shadow_client_channels_post_connect(rdpShadowClient* client)
 		shadow_client_remdesk_init(client);
 	}
 
+	if (WTSVirtualChannelManagerIsChannelJoined(client->vcm, "rdpsnd"))
+	{
+		shadow_client_rdpsnd_init(client);
+	}
+
+	shadow_client_audin_init(client);
+
 	return 1;
+}
+
+void shadow_client_channels_free(rdpShadowClient* client)
+{
+	if (client->audin)
+	{
+		audin_server_context_free(client->audin);
+	}
+
+	if (client->rdpsnd)
+	{
+		(void)client->rdpsnd->Stop(client->rdpsnd);
+		rdpsnd_server_context_free(client->rdpsnd);
+	}
+
+	if (client->remdesk)
+		remdesk_server_context_free(client->remdesk);
+
+	if (client->encomsp)
+		encomsp_server_context_free(client->encomsp);
 }
