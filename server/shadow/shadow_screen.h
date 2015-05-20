@@ -43,6 +43,7 @@ extern "C" {
 
 rdpShadowScreen* shadow_screen_new(rdpShadowServer* server);
 void shadow_screen_free(rdpShadowScreen* screen);
+void shadow_screen_reset(rdpShadowScreen* screen);
 
 #ifdef __cplusplus
 }
