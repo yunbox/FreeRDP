@@ -175,6 +175,8 @@ set(${MODULE_PREFIX}_SRCS
 	shadow_audin.h
 	shadow_subsystem.c
 	shadow_subsystem.h
+	shadow_mcevent.c
+	shadow_mcevent.h
 	shadow_server.c
 	shadow.h)
 
