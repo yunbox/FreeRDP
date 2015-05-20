@@ -190,10 +190,12 @@ FREERDP_API int shadow_server_stop(rdpShadowServer* server);
 FREERDP_API int shadow_server_init(rdpShadowServer* server);
 FREERDP_API int shadow_server_uninit(rdpShadowServer* server);
 
-FREERDP_API int shadow_enum_monitors(MONITOR_DEF* monitors, int maxMonitors, const char* name);
+FREERDP_API int shadow_enum_monitors(MONITOR_DEF* monitors, int maxMonitors);
 
 FREERDP_API rdpShadowServer* shadow_server_new();
 FREERDP_API void shadow_server_free(rdpShadowServer* server);
+
+FREERDP_API void shadow_subsystem_set_entry(pfnShadowSubsystemEntry pEntry);
 
 #ifdef __cplusplus
 }
